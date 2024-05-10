@@ -11,9 +11,6 @@ $resultado=mysqli_query($conexion,$consulta);
 
 if($resultado){
 	header("location:prueba.php");
-    echo '<script>
-    alert("¡Enhorabuena! Los datos se han guardado exitosamente.");
-</script>';
 }
 else 
 {

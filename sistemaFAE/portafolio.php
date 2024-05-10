@@ -21,10 +21,8 @@
     <img src="logo.ico">
 </div>
 
-<h2 class="row justify-content-center">Horario Escolar General</h2>
-<hr>
-<p></p>
-<p></p>
+
+
 <div>
 <div id="intro1" class="bg-image shadow-2-strong">
     <div>
@@ -34,57 +32,161 @@
           <div class="col-xl-8 col-md-8 modal-body">
             <div class="container">
     <table class="table">
-        <thead>
-            <tr>
-                <th>Hora</th>
-                <th>Lunes</th>
-                <th>Martes</th>
-                <th>Miercoles</th>
-                <th>Jueves</th>
-                <th>Viernes</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>4:00-5:00</td>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td>5:00-6:00</td>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td>6:00-7:00</td>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-              <td>7:00-8:00</td>
-              <td></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>8:00-9:00</td>
-              <td></td>
-              <td></td>
-            </tr>
-            <tr>
-              <td>9:00-10:00</td>
-              <td></td>
-              <td></td>
-            </tr>
-        </tbody>
-    </table>
+   
       
+    <?php
+// Archivo de conexión a la base de datos
+
+// Función para generar un horario escolar aleatorio
+function generateSchedule($days, $hours, $db) {
+  $schedule = array();
+
+  // Obtener aulas disponibles de la base de datos
+  $query_classrooms = "SELECT asignatura FROM docentes";
+  $result_classrooms = $db->query($query_classrooms);
+  $classrooms = array();
+  while ($row = $result_classrooms->fetch_assoc()) {
+      $classrooms[] = $row['asignatura'];
+  }
+
+  foreach ($days as $day) {
+      $schedule[$day] = array();
+
+      foreach ($hours as $hour) {
+          // Definir aula específica según el día y la hora
+          $classroom = '';
+
+          // Si es martes o jueves y la hora es de 4 a 5 o de 5 a 6
+          if (($day == 'Martes' || $day == 'Jueves') && ($hour == '4:00 a 5:00' || $hour == '5:00 a 6:00')) {
+              $classroom = 'Aula específica para martes y jueves de 4 a 6';
+          }
+
+          // Asignar el aula al horario
+          $schedule[$day][$hour] = array(
+              "classroom" => $classroom
+          );
+      }
+  }
+
+  return $schedule;
+}
+
+
+// Días de la semana y horas del día
+$days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+$hours = ['4:00 a 5:00', '5:00 a 6:00', '6:00 a 7:00', '7:00 a 8:00', '8:00 a 9:00', '9:00 a 10:00'];
+
+// Valores predeterminados (puedes cambiar esto según tus necesidades)
+$selectedDays = $days;
+$selectedHours = $hours;
+
+// Si se envió el formulario, actualizar los días y horas seleccionados
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    $selectedDays = $_POST['days'] ?? [];
+    $selectedHours = $_POST['hours'] ?? [];
+    
+    // Si se selecciona toda la columna para los días
+    if (in_array("All", $selectedDays)) {
+        $selectedDays = $days;
+    }
+    
+    // Si se selecciona toda la columna para las horas
+    if (in_array("All", $selectedHours)) {
+        $selectedHours = $hours;
+    }
+}
+
+// Conexión a la base de datos
+$db = new mysqli("localhost", "root", "", "sistemafae");
+if ($db->connect_error) {
+    die("Error de conexión: " . $db->connect_error);
+}
+
+// Generar horario aleatorio
+$schedule = generateSchedule($selectedDays, $selectedHours, $db);
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horario Escolar</title>
+    <!-- Bootstrap CSS -->
+</head>
+<body>
+
+<div class="container">
+    <h2>Horario Escolar</h2>
+    <form method="post">
+        <div class="form-group">
+            <label for="days">Seleccionar días:</label>
+            <select multiple class="form-control" id="days" name="days[]">
+                <option value="All">Toda la columna</option>
+                <?php foreach ($days as $day) : ?>
+                    <option value="<?php echo $day; ?>" <?php if (in_array($day, $selectedDays)) echo "selected"; ?>><?php echo $day; ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="hours">Seleccionar horas:</label>
+            <select multiple class="form-control" id="hours" name="hours[]">
+                <option value="All">Toda la columna</option>
+                <?php foreach ($hours as $hour) : ?>
+                    <option value="<?php echo $hour; ?>" <?php if (in_array($hour, $selectedHours)) echo "selected"; ?>><?php echo $hour; ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Actualizar</button>
+    </form>
+    <br>
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th scope="col">Hora</th>
+                    <?php foreach ($selectedDays as $day) : ?>
+                        <th scope="col"><?php echo $day; ?></th>
+                    <?php endforeach; ?>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($selectedHours as $hour) : ?>
+                    <tr>
+                        <th scope="row"><?php echo $hour; ?></th>
+                        <?php foreach ($selectedDays as $day) : ?>
+                            <?php if (isset($schedule[$day][$hour])) : ?>
+                                <td><?php echo $schedule[$day][$hour]['classroom']; ?></td>
+                            <?php else : ?>
+                                <td></td>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
+
+<?php
+// Cerrar conexión a la base de datos
+$db->close();
+?>
+
 </div>
 
 </div>
 <div class="d-grid gap-2 d-md-flex justify-content-md-center">
 <input type="submit" class="btn btn-success" value="Imprimir" data-bs-toggle="modal" data-bs-target="#exampleModal">
 <a href="prueba.php" class="btn btn-primary btn-block">Registrar Docente</a>
-<a href="" class="btn btn-warning btn-block">Generar horario</a>
+<a href="prueba2.php" class="btn btn-warning btn-block">Generar horario</a>
 </div>
 
 <!-- Modal -->
